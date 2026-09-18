@@ -36,8 +36,13 @@ class ImportedFileAdapter(
 
         fun bind(item: ImportedFile) {
             binding.fileName.text = item.name
-            binding.fileSize.text = "${item.sizeBytes / 1024} KB"
-            binding.runButton.setOnClickListener { onRunClicked(item) }
+            binding.fileSize.text = "${item.sizeBytes / 1024} KB · ${item.architectureLabel}"
+            binding.runButton.isEnabled = item.isRunnable
+            binding.runButton.alpha = if (item.isRunnable) 1f else 0.4f
+            binding.runButton.text = if (item.isRunnable) "Run" else "Unsupported"
+            binding.runButton.setOnClickListener {
+                if (item.isRunnable) onRunClicked(item)
+            }
         }
     }
 }

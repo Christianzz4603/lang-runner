@@ -11,6 +11,7 @@ import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.langrunner.app.MainActivity
 import com.langrunner.app.databinding.FragmentImportBinding
+import com.langrunner.app.exec.ElfInspector
 import com.langrunner.app.model.ImportedFile
 import java.io.File
 
@@ -62,12 +63,17 @@ class ImportFragment : Fragment() {
         val displayName = queryDisplayName(uri) ?: "imported_${System.currentTimeMillis()}"
         val destination = File(binDir, displayName)
 
-        resolver.openInputStream(uri)?.use { input ->
-            destination.outputStream().use { output ->
-                input.copyTo(output)
+        try {
+            resolver.openInputStream(uri)?.use { input ->
+                destination.outputStream().use { output ->
+                    input.copyTo(output)
+                }
             }
+            destination.setExecutable(true, false)
+            destination.setReadable(true, false)
+        } catch (_: Exception) {
+            // Surfaced to the user via the file simply not appearing / size showing 0 in the list.
         }
-        destination.setExecutable(true, false)
         refreshList()
     }
 
@@ -83,8 +89,20 @@ class ImportFragment : Fragment() {
     }
 
     private fun refreshList() {
-        val files = binDir.listFiles()?.map {
-            ImportedFile(name = it.name, absolutePath = it.absolutePath, sizeBytes = it.length())
+        val files = binDir.listFiles()?.map { file ->
+            val info = try {
+                ElfInspector.inspect(file)
+            } catch (_: Exception) {
+                ElfInspector.ElfInfo(isElf = false, is64Bit = false, machine = 0)
+            }
+            val label = if (!info.isElf) "not an ELF executable" else ElfInspector.architectureName(info.machine)
+            ImportedFile(
+                name = file.name,
+                absolutePath = file.absolutePath,
+                sizeBytes = file.length(),
+                architectureLabel = label,
+                isRunnable = ElfInspector.isSupported(info)
+            )
         } ?: emptyList()
         adapter.submitList(files)
         binding.emptyState.visibility = if (files.isEmpty()) View.VISIBLE else View.GONE

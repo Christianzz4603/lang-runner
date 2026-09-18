@@ -44,6 +44,8 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
                     env = session.env,
                     onProcess = { runningProcessRef = it }
                 ).collect { appendLine(it) }
+            } catch (e: Exception) {
+                appendLine("error: ${e.message}")
             } finally {
                 runningProcessRef = null
                 _isRunning.postValue(false)
@@ -72,6 +74,8 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
                             session.env,
                             onProcess = { runningProcessRef = it }
                         ).collect { appendLine(it) }
+                    } catch (e: Exception) {
+                        appendLine("error: ${e.message}")
                     } finally {
                         runningProcessRef = null
                         _isRunning.postValue(false)
