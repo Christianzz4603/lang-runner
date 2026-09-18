@@ -21,9 +21,14 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        if (savedInstanceState == null) {
-            showFragment(terminalFragment, "terminal", "Terminal")
+        // Always start fresh on the Terminal tab. Deliberately ignoring
+        // savedInstanceState here: if the app previously crashed while a
+        // different tab was open, letting FragmentManager auto-restore that
+        // tab would immediately re-trigger the same crash on every relaunch.
+        supportFragmentManager.fragments.forEach {
+            supportFragmentManager.beginTransaction().remove(it).commitNowAllowingStateLoss()
         }
+        showFragment(terminalFragment, "terminal", "Terminal")
 
         binding.bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {

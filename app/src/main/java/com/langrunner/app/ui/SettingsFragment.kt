@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.LinearLayout
+import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import com.langrunner.app.R
@@ -39,28 +40,32 @@ class SettingsFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        settings = SettingsRepository(requireContext())
+        try {
+            settings = SettingsRepository(requireContext())
 
-        binding.bgColorGroup.removeAllViews()
-        presetColors.forEach { color ->
-            addColorSwatch(binding.bgColorGroup, color) { settings.backgroundColor = color }
-        }
+            binding.bgColorGroup.removeAllViews()
+            presetColors.forEach { color ->
+                addColorSwatch(binding.bgColorGroup, color) { settings.backgroundColor = color }
+            }
 
-        binding.textColorGroup.removeAllViews()
-        presetTextColors.forEach { color ->
-            addColorSwatch(binding.textColorGroup, color) { settings.textColor = color }
-        }
+            binding.textColorGroup.removeAllViews()
+            presetTextColors.forEach { color ->
+                addColorSwatch(binding.textColorGroup, color) { settings.textColor = color }
+            }
 
-        binding.fontSizeSlider.value = settings.fontSizeSp
-        binding.fontSizeSlider.addOnChangeListener { _, value, _ ->
-            settings.fontSizeSp = value
-        }
+            binding.fontSizeSlider.value = settings.fontSizeSp
+            binding.fontSizeSlider.addOnChangeListener { _, value, _ ->
+                settings.fontSizeSp = value
+            }
 
-        val fontAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, presetFonts)
-        binding.fontFamilyDropdown.setAdapter(fontAdapter)
-        binding.fontFamilyDropdown.setText(settings.fontFamily, false)
-        binding.fontFamilyDropdown.setOnItemClickListener { _, _, position, _ ->
-            settings.fontFamily = presetFonts[position]
+            val fontAdapter = ArrayAdapter(requireContext(), android.R.layout.simple_dropdown_item_1line, presetFonts)
+            binding.fontFamilyDropdown.setAdapter(fontAdapter)
+            binding.fontFamilyDropdown.setText(settings.fontFamily, false)
+            binding.fontFamilyDropdown.setOnItemClickListener { _, _, position, _ ->
+                settings.fontFamily = presetFonts[position]
+            }
+        } catch (e: Exception) {
+            Toast.makeText(requireContext(), "Settings failed to load: ${e.message}", Toast.LENGTH_LONG).show()
         }
     }
 
