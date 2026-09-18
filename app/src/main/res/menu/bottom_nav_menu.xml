@@ -3,13 +3,13 @@
     <item
         android:id="@+id/nav_terminal"
         android:title="Terminal"
-        android:icon="@android:drawable/ic_menu_edit" />
+        android:icon="@drawable/ic_terminal" />
     <item
         android:id="@+id/nav_import"
         android:title="Import"
-        android:icon="@android:drawable/ic_menu_upload" />
+        android:icon="@drawable/ic_import" />
     <item
         android:id="@+id/nav_settings"
         android:title="Settings"
-        android:icon="@android:drawable/ic_menu_preferences" />
+        android:icon="@drawable/ic_settings" />
 </menu>

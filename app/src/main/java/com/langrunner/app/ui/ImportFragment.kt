@@ -43,7 +43,7 @@ class ImportFragment : Fragment() {
 
         adapter = ImportedFileAdapter { imported ->
             val binary = File(imported.absolutePath)
-            viewModel.runBinary(binary, workingDir = binDir)
+            viewModel.runBinary(binary)
             (requireActivity() as? MainActivity)?.switchToTerminalTab()
         }
 
@@ -87,6 +87,7 @@ class ImportFragment : Fragment() {
             ImportedFile(name = it.name, absolutePath = it.absolutePath, sizeBytes = it.length())
         } ?: emptyList()
         adapter.submitList(files)
+        binding.emptyState.visibility = if (files.isEmpty()) View.VISIBLE else View.GONE
     }
 
     override fun onDestroyView() {

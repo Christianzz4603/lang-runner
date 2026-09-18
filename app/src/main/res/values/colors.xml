@@ -1,5 +1,12 @@
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
-    <color name="terminal_green">#FF33FF33</color>
+    <color name="background_dark">#FF121212</color>
+    <color name="surface_dark">#FF1E1E1E</color>
+    <color name="surface_variant_dark">#FF2A2A2A</color>
+    <color name="accent_teal">#FF00BFA5</color>
+    <color name="accent_teal_dark">#FF00997F</color>
+    <color name="on_surface">#FFECECEC</color>
+    <color name="on_surface_variant">#FFAAAAAA</color>
+    <color name="terminal_bg">#FF0B0F0E</color>
+    <color name="terminal_fg">#FF33FF33</color>
+    <color name="danger">#FFCF6679</color>
 </resources>

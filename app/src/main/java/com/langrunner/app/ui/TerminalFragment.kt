@@ -2,6 +2,7 @@ package com.langrunner.app.ui
 
 import android.graphics.Typeface
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -9,6 +10,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.langrunner.app.data.SettingsRepository
 import com.langrunner.app.databinding.FragmentTerminalBinding
+import com.langrunner.app.terminal.AnsiParser
 
 class TerminalFragment : Fragment() {
 
@@ -31,28 +33,32 @@ class TerminalFragment : Fragment() {
         applyAppearance()
 
         viewModel.output.observe(viewLifecycleOwner) { text ->
-            binding.terminalOutput.text = text
+            binding.terminalOutput.text = AnsiParser.render(text, settings.textColor)
             binding.terminalScroll.post {
                 binding.terminalScroll.fullScroll(View.FOCUS_DOWN)
             }
         }
 
-        binding.terminalSend.setOnClickListener {
-            val cmd = binding.terminalInput.text.toString().trim()
-            if (cmd.isNotEmpty()) {
-                val workingDir = requireContext().filesDir
-                viewModel.runCommand(cmd, workingDir)
-                binding.terminalInput.text.clear()
-            }
+        viewModel.promptDir.observe(viewLifecycleOwner) { dirName ->
+            binding.promptLabel.text = "$dirName $"
+        }
+
+        binding.terminalSend.setOnClickListener { sendCommand() }
+        binding.terminalInput.setOnEditorActionListener { _, _, _ -> sendCommand(); true }
+    }
+
+    private fun sendCommand() {
+        val cmd = binding.terminalInput.text.toString().trim()
+        if (cmd.isNotEmpty()) {
+            viewModel.runCommand(cmd)
+            binding.terminalInput.text.clear()
         }
     }
 
     private fun applyAppearance() {
-        binding.terminalOutput.setBackgroundColor(settings.backgroundColor)
-        binding.terminalOutput.setTextColor(settings.textColor)
-        binding.terminalOutput.textSize = settings.fontSizeSp
+        binding.terminalCard.setCardBackgroundColor(settings.backgroundColor)
+        binding.terminalOutput.setTextSize(TypedValue.COMPLEX_UNIT_SP, settings.fontSizeSp)
         binding.terminalOutput.typeface = Typeface.create(settings.fontFamily, Typeface.NORMAL)
-        binding.root.setBackgroundColor(settings.backgroundColor)
     }
 
     override fun onResume() {

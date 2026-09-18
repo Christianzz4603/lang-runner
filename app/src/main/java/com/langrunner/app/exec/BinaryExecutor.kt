@@ -21,7 +21,12 @@ object BinaryExecutor {
 
     private const val LINKER64 = "/system/bin/linker64"
 
-    fun run(binary: File, args: List<String> = emptyList(), workingDir: File): Flow<String> = flow {
+    fun run(
+        binary: File,
+        args: List<String> = emptyList(),
+        workingDir: File,
+        env: Map<String, String> = emptyMap()
+    ): Flow<String> = flow {
         if (!binary.exists()) {
             emit("error: file not found: ${binary.absolutePath}")
             return@flow
@@ -33,6 +38,7 @@ object BinaryExecutor {
         val process = ProcessBuilder(command)
             .directory(workingDir)
             .redirectErrorStream(true)
+            .apply { environment().putAll(env) }
             .start()
 
         BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
@@ -48,10 +54,15 @@ object BinaryExecutor {
     }.flowOn(Dispatchers.IO)
 
     /** Runs an arbitrary shell command through /system/bin/sh (used by the interactive terminal). */
-    fun runShellCommand(command: String, workingDir: File): Flow<String> = flow {
+    fun runShellCommand(
+        command: String,
+        workingDir: File,
+        env: Map<String, String> = emptyMap()
+    ): Flow<String> = flow {
         val process = ProcessBuilder("/system/bin/sh", "-c", command)
             .directory(workingDir)
             .redirectErrorStream(true)
+            .apply { environment().putAll(env) }
             .start()
 
         BufferedReader(InputStreamReader(process.inputStream)).use { reader ->

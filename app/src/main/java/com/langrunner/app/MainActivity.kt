@@ -22,20 +22,21 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         if (savedInstanceState == null) {
-            showFragment(terminalFragment, "terminal")
+            showFragment(terminalFragment, "terminal", "Terminal")
         }
 
         binding.bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.nav_terminal -> showFragment(terminalFragment, "terminal")
-                R.id.nav_import -> showFragment(importFragment, "import")
-                R.id.nav_settings -> showFragment(settingsFragment, "settings")
+                R.id.nav_terminal -> showFragment(terminalFragment, "terminal", "Terminal")
+                R.id.nav_import -> showFragment(importFragment, "import", "Import")
+                R.id.nav_settings -> showFragment(settingsFragment, "settings", "Settings")
             }
             true
         }
     }
 
-    private fun showFragment(fragment: Fragment, tag: String) {
+    private fun showFragment(fragment: Fragment, tag: String, title: String) {
+        binding.topAppBar.title = title
         supportFragmentManager.beginTransaction()
             .replace(R.id.fragmentContainer, fragment, tag)
             .commit()

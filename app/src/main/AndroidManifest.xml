@@ -7,7 +7,7 @@
         android:label="@string/app_name"
         android:supportsRtl="true"
         android:theme="@style/Theme.LangRunner"
-        android:extractNativeLibs="false">
+        android:extractNativeLibs="true">
 
         <activity
             android:name=".MainActivity"
