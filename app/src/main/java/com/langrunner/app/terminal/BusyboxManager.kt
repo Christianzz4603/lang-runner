@@ -13,6 +13,10 @@ import java.io.File
  * applet dispatch works, and that directory is put on PATH ahead of
  * /system/bin.
  *
+ * Includes wget (bundled in busybox itself) for basic downloads. curl is a
+ * separate project, not part of busybox — see the Import tab for running a
+ * separately-downloaded static curl binary instead.
+ *
  * This project does not ship an actual busybox binary — see
  * app/src/main/jniLibs/README.md for how to add one. Everything here
  * degrades gracefully (isAvailable == false, PATH falls back to /system/bin)
@@ -23,7 +27,8 @@ class BusyboxManager(private val context: Context) {
     private val applets = listOf(
         "ls", "cat", "echo", "grep", "sed", "awk", "find", "ps", "mkdir", "rm",
         "mv", "cp", "chmod", "tar", "gzip", "gunzip", "wc", "head", "tail",
-        "sort", "uniq", "cut", "diff", "du", "df", "which", "xargs"
+        "sort", "uniq", "cut", "diff", "du", "df", "which", "xargs",
+        "wget", "nc"
     )
 
     val toolboxDir: File = File(context.filesDir, "toolbox")

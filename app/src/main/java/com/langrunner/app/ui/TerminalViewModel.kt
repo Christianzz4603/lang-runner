@@ -38,13 +38,15 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
 
     private val log = StringBuilder()
 
-    fun runBinary(binary: File) {
-        appendLine("$ ${binary.name}")
+    fun runBinary(binary: File, args: List<String> = emptyList()) {
+        val echo = if (args.isEmpty()) binary.name else "${binary.name} ${args.joinToString(" ")}"
+        appendLine("$ $echo")
         _isRunning.postValue(true)
         runningJob = viewModelScope.launch {
             try {
                 BinaryExecutor.run(
                     binary,
+                    args = args,
                     workingDir = session.currentDirectory,
                     env = session.env,
                     onProcess = { runningProcessRef = it }

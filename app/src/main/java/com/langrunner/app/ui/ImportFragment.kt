@@ -5,10 +5,13 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.EditText
+import android.widget.FrameLayout
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.langrunner.app.MainActivity
 import com.langrunner.app.databinding.FragmentImportBinding
 import com.langrunner.app.exec.ElfInspector
@@ -43,9 +46,7 @@ class ImportFragment : Fragment() {
         binDir = File(requireContext().filesDir, "bin").apply { mkdirs() }
 
         adapter = ImportedFileAdapter { imported ->
-            val binary = File(imported.absolutePath)
-            viewModel.runBinary(binary)
-            (requireActivity() as? MainActivity)?.switchToTerminalTab()
+            showArgsDialog(File(imported.absolutePath))
         }
 
         binding.importedList.layoutManager = LinearLayoutManager(requireContext())
@@ -56,6 +57,33 @@ class ImportFragment : Fragment() {
         }
 
         refreshList()
+    }
+
+    /** e.g. running an imported curl binary needs a URL/flags — ask before launching. */
+    private fun showArgsDialog(binary: File) {
+        val input = EditText(requireContext()).apply {
+            hint = "e.g. -O https://example.com/file"
+            setSingleLine()
+        }
+        val padding = (16 * resources.displayMetrics.density).toInt()
+        val container = FrameLayout(requireContext()).apply {
+            setPadding(padding, padding / 2, padding, 0)
+            addView(input)
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle("Run ${binary.name}")
+            .setMessage("Arguments (optional)")
+            .setView(container)
+            .setPositiveButton("Run") { _, _ ->
+                val args = input.text.toString().trim()
+                    .split(Regex("\\s+"))
+                    .filter { it.isNotEmpty() }
+                viewModel.runBinary(binary, args)
+                (requireActivity() as? MainActivity)?.switchToTerminalTab()
+            }
+            .setNegativeButton("Cancel", null)
+            .show()
     }
 
     private fun copyIntoAppStorage(uri: Uri) {
