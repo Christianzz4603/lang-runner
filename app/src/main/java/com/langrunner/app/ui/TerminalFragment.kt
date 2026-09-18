@@ -6,6 +6,7 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.inputmethod.EditorInfo
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.langrunner.app.R
@@ -56,7 +57,18 @@ class TerminalFragment : Fragment() {
                 sendCommand()
             }
         }
-        binding.terminalInput.setOnEditorActionListener { _, _, _ -> sendCommand(); true }
+
+        // IMPORTANT: only react to the actual IME "send" action. Some keyboards
+        // invoke this listener a second time with a raw Enter KeyEvent for the
+        // same press — reacting to that too was submitting every command twice.
+        binding.terminalInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEND) {
+                sendCommand()
+                true
+            } else {
+                false
+            }
+        }
     }
 
     private fun sendCommand() {

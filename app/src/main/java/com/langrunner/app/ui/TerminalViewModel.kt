@@ -9,6 +9,7 @@ import com.langrunner.app.exec.BinaryExecutor
 import com.langrunner.app.terminal.BusyboxManager
 import com.langrunner.app.terminal.ShellResult
 import com.langrunner.app.terminal.ShellSession
+import com.langrunner.app.terminal.StorageAccess
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.File
@@ -18,6 +19,10 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
     private val busybox = BusyboxManager(app)
     private val toolboxDir = busybox.ensureInstalled()
     private val session = ShellSession(app.filesDir, toolboxDir)
+
+    init {
+        StorageAccess.ensureStorageSymlink(app.filesDir)
+    }
 
     private val _output = MutableLiveData("")
     val output: LiveData<String> = _output

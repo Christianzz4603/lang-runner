@@ -13,6 +13,7 @@ import androidx.fragment.app.Fragment
 import com.langrunner.app.R
 import com.langrunner.app.data.SettingsRepository
 import com.langrunner.app.databinding.FragmentSettingsBinding
+import com.langrunner.app.terminal.StorageAccess
 
 class SettingsFragment : Fragment() {
 
@@ -43,6 +44,11 @@ class SettingsFragment : Fragment() {
         try {
             settings = SettingsRepository(requireContext())
 
+            refreshStorageStatus()
+            binding.storagePermissionButton.setOnClickListener {
+                startActivity(StorageAccess.requestAllFilesAccessIntent(requireContext()))
+            }
+
             binding.bgColorGroup.removeAllViews()
             presetColors.forEach { color ->
                 addColorSwatch(binding.bgColorGroup, color) { settings.backgroundColor = color }
@@ -67,6 +73,21 @@ class SettingsFragment : Fragment() {
         } catch (e: Exception) {
             Toast.makeText(requireContext(), "Settings failed to load: ${e.message}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun refreshStorageStatus() {
+        val granted = StorageAccess.hasAllFilesAccess()
+        binding.storageStatusText.text = if (granted) {
+            "Granted — binaries can reach shared storage via ~/storage/shared"
+        } else {
+            "Not granted — binaries are limited to the app's private storage"
+        }
+        binding.storagePermissionButton.text = if (granted) "Manage in system settings" else "Grant full storage access"
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (_binding != null) refreshStorageStatus()
     }
 
     private fun addColorSwatch(container: LinearLayout, color: Int, onClick: () -> Unit) {
