@@ -25,7 +25,8 @@ object BinaryExecutor {
         binary: File,
         args: List<String> = emptyList(),
         workingDir: File,
-        env: Map<String, String> = emptyMap()
+        env: Map<String, String> = emptyMap(),
+        onProcess: (Process) -> Unit = {}
     ): Flow<String> = flow {
         if (!binary.exists()) {
             emit("error: file not found: ${binary.absolutePath}")
@@ -40,6 +41,7 @@ object BinaryExecutor {
             .redirectErrorStream(true)
             .apply { environment().putAll(env) }
             .start()
+        onProcess(process)
 
         BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
             var line: String?
@@ -57,13 +59,15 @@ object BinaryExecutor {
     fun runShellCommand(
         command: String,
         workingDir: File,
-        env: Map<String, String> = emptyMap()
+        env: Map<String, String> = emptyMap(),
+        onProcess: (Process) -> Unit = {}
     ): Flow<String> = flow {
         val process = ProcessBuilder("/system/bin/sh", "-c", command)
             .directory(workingDir)
             .redirectErrorStream(true)
             .apply { environment().putAll(env) }
             .start()
+        onProcess(process)
 
         BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
             var line: String?

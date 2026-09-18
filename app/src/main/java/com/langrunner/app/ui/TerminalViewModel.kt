@@ -9,6 +9,7 @@ import com.langrunner.app.exec.BinaryExecutor
 import com.langrunner.app.terminal.BusyboxManager
 import com.langrunner.app.terminal.ShellResult
 import com.langrunner.app.terminal.ShellSession
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -24,13 +25,29 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
     private val _promptDir = MutableLiveData(session.currentDirectory.name.ifEmpty { "~" })
     val promptDir: LiveData<String> = _promptDir
 
+    private val _isRunning = MutableLiveData(false)
+    val isRunning: LiveData<Boolean> = _isRunning
+
+    private var runningProcessRef: Process? = null
+    private var runningJob: Job? = null
+
     private val log = StringBuilder()
 
     fun runBinary(binary: File) {
         appendLine("$ ${binary.name}")
-        viewModelScope.launch {
-            BinaryExecutor.run(binary, workingDir = session.currentDirectory, env = session.env)
-                .collect { appendLine(it) }
+        _isRunning.postValue(true)
+        runningJob = viewModelScope.launch {
+            try {
+                BinaryExecutor.run(
+                    binary,
+                    workingDir = session.currentDirectory,
+                    env = session.env,
+                    onProcess = { runningProcessRef = it }
+                ).collect { appendLine(it) }
+            } finally {
+                runningProcessRef = null
+                _isRunning.postValue(false)
+            }
         }
     }
 
@@ -46,12 +63,31 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
                 _promptDir.postValue(session.currentDirectory.name.ifEmpty { "~" })
             }
             is ShellResult.RunExternally -> {
-                viewModelScope.launch {
-                    BinaryExecutor.runShellCommand(result.command, session.currentDirectory, session.env)
-                        .collect { appendLine(it) }
+                _isRunning.postValue(true)
+                runningJob = viewModelScope.launch {
+                    try {
+                        BinaryExecutor.runShellCommand(
+                            result.command,
+                            session.currentDirectory,
+                            session.env,
+                            onProcess = { runningProcessRef = it }
+                        ).collect { appendLine(it) }
+                    } finally {
+                        runningProcessRef = null
+                        _isRunning.postValue(false)
+                    }
                 }
             }
         }
+    }
+
+    /** Kills the currently running command, if any — backs the terminal's Run/Stop toggle button. */
+    fun stopCurrentCommand() {
+        runningProcessRef?.destroy()
+        runningJob?.cancel()
+        runningProcessRef = null
+        _isRunning.postValue(false)
+        appendLine("[stopped]")
     }
 
     private fun appendLine(line: String) {

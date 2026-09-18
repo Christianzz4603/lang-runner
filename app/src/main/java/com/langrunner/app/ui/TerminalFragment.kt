@@ -8,6 +8,7 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.langrunner.app.R
 import com.langrunner.app.data.SettingsRepository
 import com.langrunner.app.databinding.FragmentTerminalBinding
 import com.langrunner.app.terminal.AnsiParser
@@ -43,7 +44,18 @@ class TerminalFragment : Fragment() {
             binding.promptLabel.text = "$dirName $"
         }
 
-        binding.terminalSend.setOnClickListener { sendCommand() }
+        viewModel.isRunning.observe(viewLifecycleOwner) { running ->
+            binding.runningIndicator.visibility = if (running) View.VISIBLE else View.GONE
+            binding.terminalSend.setIconResource(if (running) R.drawable.ic_stop else R.drawable.ic_run)
+        }
+
+        binding.terminalSend.setOnClickListener {
+            if (viewModel.isRunning.value == true) {
+                viewModel.stopCurrentCommand()
+            } else {
+                sendCommand()
+            }
+        }
         binding.terminalInput.setOnEditorActionListener { _, _, _ -> sendCommand(); true }
     }
 
