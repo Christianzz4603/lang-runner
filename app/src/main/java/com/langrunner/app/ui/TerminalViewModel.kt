@@ -39,7 +39,11 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
     private var runningProcessRef: Process? = null
     private var runningJob: Job? = null
 
-    private val log = StringBuilder()
+    // Line-based buffer instead of one flat string, so \r can genuinely
+    // overwrite the in-progress line (like a real terminal) instead of every
+    // spinner/progress-bar frame becoming its own permanent line.
+    private val completedLines = mutableListOf<String>()
+    private val currentLine = StringBuilder()
 
     fun runBinary(binary: File, args: List<String> = emptyList()) {
         val echo = if (args.isEmpty()) binary.name else "${binary.name} ${args.joinToString(" ")}"
@@ -129,27 +133,54 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
         appendLine("[stopped]")
     }
 
-    /** For status/echo lines we author ourselves — always starts on a fresh line. */
+    /** For status/echo lines we author ourselves — always starts on a fresh line
+     *  (flushes whatever was mid-progress on the current line first). */
     private fun appendLine(line: String) {
-        ensureFreshLine()
-        log.append(line).append('\n')
-        _output.postValue(log.toString())
+        flushCurrentLine()
+        completedLines.add(line)
+        publish()
     }
 
-    /** For raw process output — appended verbatim, no forced line breaks. */
+    /**
+     * For raw process output. Processes character-by-character so `\r` acts
+     * like a real terminal: it returns to the start of the current line so
+     * whatever comes next overwrites it, rather than appending a new line.
+     * This is what makes spinners/progress bars show as one updating line
+     * instead of one permanent line per animation frame.
+     */
     private fun appendRaw(text: String) {
-        log.append(text)
-        _output.postValue(log.toString())
+        for (ch in text) {
+            when (ch) {
+                '\n' -> {
+                    completedLines.add(currentLine.toString())
+                    currentLine.setLength(0)
+                }
+                '\r' -> currentLine.setLength(0)
+                else -> currentLine.append(ch)
+            }
+        }
+        publish()
     }
 
-    private fun ensureFreshLine() {
-        if (log.isNotEmpty() && log.last() != '\n') {
-            log.append('\n')
+    private fun flushCurrentLine() {
+        if (currentLine.isNotEmpty()) {
+            completedLines.add(currentLine.toString())
+            currentLine.setLength(0)
         }
     }
 
+    private fun publish() {
+        val text = if (currentLine.isEmpty()) {
+            completedLines.joinToString("\n")
+        } else {
+            (completedLines + currentLine.toString()).joinToString("\n")
+        }
+        _output.postValue(text)
+    }
+
     fun clear() {
-        log.clear()
+        completedLines.clear()
+        currentLine.setLength(0)
         _output.postValue("")
     }
 }
