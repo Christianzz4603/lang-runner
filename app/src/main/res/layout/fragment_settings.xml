@@ -148,8 +148,8 @@
                     android:layout_height="wrap_content"
                     app:thumbColor="@color/accent_teal"
                     app:trackColorActive="@color/accent_teal"
-                    android:valueFrom="10"
-                    android:valueTo="24"
+                    android:valueFrom="8"
+                    android:valueTo="20"
                     android:stepSize="1" />
 
             </LinearLayout>

@@ -5,7 +5,7 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@color/background_dark"
-    android:padding="12dp">
+    android:padding="6dp">
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/terminalCard"
@@ -13,7 +13,7 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         app:cardBackgroundColor="@color/terminal_bg"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="12dp"
         app:cardElevation="2dp"
         app:strokeWidth="0dp">
 
@@ -21,14 +21,14 @@
             android:id="@+id/terminalScroll"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:padding="12dp">
+            android:padding="6dp">
 
             <TextView
                 android:id="@+id/terminalOutput"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:textColor="@color/terminal_fg"
-                android:textSize="13sp"
+                android:textSize="11sp"
                 android:fontFamily="monospace"
                 android:textIsSelectable="true" />
 
@@ -41,7 +41,7 @@
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center_vertical"
-        android:paddingTop="10dp">
+        android:paddingTop="8dp">
 
         <com.google.android.material.progressindicator.CircularProgressIndicator
             android:id="@+id/runningIndicator"
@@ -60,6 +60,7 @@
             android:text="~ $"
             android:textColor="@color/accent_teal"
             android:fontFamily="monospace"
+            android:textSize="13sp"
             android:textStyle="bold"
             android:paddingEnd="6dp" />
 
@@ -73,6 +74,7 @@
             android:textColorHint="@color/on_surface_variant"
             android:textColor="@color/on_surface"
             android:fontFamily="monospace"
+            android:textSize="13sp"
             android:inputType="text"
             android:imeOptions="actionSend" />
 

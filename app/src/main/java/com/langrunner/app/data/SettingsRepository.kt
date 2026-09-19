@@ -32,7 +32,9 @@ class SettingsRepository(context: Context) {
 
         const val DEFAULT_BG = 0xFF000000.toInt()
         const val DEFAULT_TEXT = 0xFF33FF33.toInt()
-        const val DEFAULT_FONT_SIZE = 14f
+        // Smaller default so more characters fit per line before wrapping,
+        // closer to Termux's density (was 14f).
+        const val DEFAULT_FONT_SIZE = 11f
         const val DEFAULT_FONT_FAMILY = "monospace"
     }
 }
