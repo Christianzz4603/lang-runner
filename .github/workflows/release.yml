@@ -2,8 +2,10 @@ name: Release
 
 on:
   push:
+    branches: [ "main" ]
     tags:
       - 'v*'
+  workflow_dispatch:
 
 jobs:
   release:
@@ -34,17 +36,37 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: gradle assembleRelease --no-daemon
 
+      # Manual `git tag v1.0.0` pushes keep that exact tag/name as a proper
+      # release. Every other push to main (the common case now) gets an
+      # auto-generated build-N tag, marked as a pre-release so it doesn't
+      # clutter or get confused with real versioned releases.
+      - name: Compute release tag
+        id: tag
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "name=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=build-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Rename APK for the release
-        run: cp app/build/outputs/apk/release/app-release.apk lang-runner-${{ github.ref_name }}.apk
+        run: cp app/build/outputs/apk/release/app-release.apk lang-runner-${{ steps.tag.outputs.name }}.apk
 
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create ${{ github.ref_name }} \
-            lang-runner-${{ github.ref_name }}.apk \
-            --title "Lang Runner ${{ github.ref_name }}" \
-            --generate-notes
+          PRERELEASE_FLAG=""
+          if [[ "${{ steps.tag.outputs.prerelease }}" == "true" ]]; then
+            PRERELEASE_FLAG="--prerelease"
+          fi
+          gh release create ${{ steps.tag.outputs.name }} \
+            lang-runner-${{ steps.tag.outputs.name }}.apk \
+            --title "Lang Runner ${{ steps.tag.outputs.name }}" \
+            --generate-notes \
+            $PRERELEASE_FLAG
 
       - name: Clean up keystore
         if: always()
