@@ -6,6 +6,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.viewModelScope
 import com.langrunner.app.exec.BinaryExecutor
+import com.langrunner.app.exec.ExecOutput
 import com.langrunner.app.terminal.BusyboxManager
 import com.langrunner.app.terminal.ShellResult
 import com.langrunner.app.terminal.ShellSession
@@ -50,7 +51,7 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
                     workingDir = session.currentDirectory,
                     env = session.env,
                     onProcess = { runningProcessRef = it }
-                ).collect { appendLine(it) }
+                ).collect { handle(it) }
             } catch (e: Exception) {
                 appendLine("error: ${e.message}")
             } finally {
@@ -80,7 +81,7 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
                             session.currentDirectory,
                             session.env,
                             onProcess = { runningProcessRef = it }
-                        ).collect { appendLine(it) }
+                        ).collect { handle(it) }
                     } catch (e: Exception) {
                         appendLine("error: ${e.message}")
                     } finally {
@@ -89,6 +90,13 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
                     }
                 }
             }
+        }
+    }
+
+    private fun handle(output: ExecOutput) {
+        when (output) {
+            is ExecOutput.Raw -> appendRaw(output.text)
+            is ExecOutput.Status -> appendLine(output.text)
         }
     }
 
@@ -101,9 +109,23 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
         appendLine("[stopped]")
     }
 
+    /** For status/echo lines we author ourselves — always starts on a fresh line. */
     private fun appendLine(line: String) {
+        ensureFreshLine()
         log.append(line).append('\n')
         _output.postValue(log.toString())
+    }
+
+    /** For raw process output — appended verbatim, no forced line breaks. */
+    private fun appendRaw(text: String) {
+        log.append(text)
+        _output.postValue(log.toString())
+    }
+
+    private fun ensureFreshLine() {
+        if (log.isNotEmpty() && log.last() != '\n') {
+            log.append('\n')
+        }
     }
 
     fun clear() {

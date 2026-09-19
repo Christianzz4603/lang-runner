@@ -15,6 +15,11 @@ import android.text.style.StyleSpan
  * a full custom terminal view and is tracked as future work. What this covers
  * is the most common real-world use of ANSI codes in a build/run terminal:
  * colored compiler output, `ls --color`, `grep --color`, etc.
+ *
+ * Carriage returns (used by progress bars/spinners to overwrite the current
+ * line) are normalized to newlines for display, since we don't yet support
+ *真正 overwriting a rendered line in place — this avoids them visually
+ * collapsing into whatever text follows.
  */
 object AnsiParser {
 
@@ -41,7 +46,8 @@ object AnsiParser {
     )
 
     fun render(raw: String, defaultColor: Int): SpannableStringBuilder {
-        val cleaned = unsupportedEscapeRegex.replace(raw, "")
+        val normalized = raw.replace("\r\n", "\n").replace('\r', '\n')
+        val cleaned = unsupportedEscapeRegex.replace(normalized, "")
 
         val builder = SpannableStringBuilder()
         var currentColor = defaultColor

@@ -2,11 +2,24 @@ package com.langrunner.app.exec
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
-import java.io.BufferedReader
 import java.io.File
 import java.io.InputStreamReader
+
+/**
+ * Distinguishes raw, verbatim process output from status messages we author
+ * ourselves (exit codes, error text) that should always start on their own
+ * line. This split exists because real terminal output isn't line-buffered —
+ * a program can print partial text with no trailing newline (progress bars,
+ * prompts, spinners), and forcing every chunk of output to wait for / end in
+ * a newline was mashing that kind of output together.
+ */
+sealed class ExecOutput {
+    data class Raw(val text: String) : ExecOutput()
+    data class Status(val text: String) : ExecOutput()
+}
 
 /**
  * Runs imported ARM64 ELF binaries by invoking Android's dynamic linker directly
@@ -25,6 +38,7 @@ import java.io.InputStreamReader
 object BinaryExecutor {
 
     private const val LINKER64 = "/system/bin/linker64"
+    private const val READ_BUFFER_SIZE = 4096
 
     fun run(
         binary: File,
@@ -32,29 +46,29 @@ object BinaryExecutor {
         workingDir: File,
         env: Map<String, String> = emptyMap(),
         onProcess: (Process) -> Unit = {}
-    ): Flow<String> = flow {
+    ): Flow<ExecOutput> = flow {
         if (!binary.exists()) {
-            emit("error: file not found: ${binary.absolutePath}")
+            emit(ExecOutput.Status("error: file not found: ${binary.absolutePath}"))
             return@flow
         }
 
         val info = try {
             ElfInspector.inspect(binary)
         } catch (e: Exception) {
-            emit("error: couldn't read '${binary.name}': ${e.message}")
+            emit(ExecOutput.Status("error: couldn't read '${binary.name}': ${e.message}"))
             return@flow
         }
 
         if (!info.isElf) {
-            emit("error: '${binary.name}' isn't a valid ELF executable — is it actually a compiled binary?")
+            emit(ExecOutput.Status("error: '${binary.name}' isn't a valid ELF executable — is it actually a compiled binary?"))
             return@flow
         }
 
         if (!ElfInspector.isSupported(info)) {
-            emit("error: '${binary.name}' is built for ${ElfInspector.architectureName(info.machine)}, but this app only runs ARM64 (aarch64) binaries.")
-            emit("If this is Rust, cross-compile for Android's target instead of your PC's:")
-            emit("  rustup target add aarch64-linux-android")
-            emit("  cargo build --release --target aarch64-linux-android")
+            emit(ExecOutput.Status("error: '${binary.name}' is built for ${ElfInspector.architectureName(info.machine)}, but this app only runs ARM64 (aarch64) binaries."))
+            emit(ExecOutput.Status("If this is Rust, cross-compile for Android's target instead of your PC's:"))
+            emit(ExecOutput.Status("  rustup target add aarch64-linux-android"))
+            emit(ExecOutput.Status("  cargo build --release --target aarch64-linux-android"))
             return@flow
         }
 
@@ -69,18 +83,12 @@ object BinaryExecutor {
                 .start()
             onProcess(process)
 
-            BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
-                var line: String?
-                while (true) {
-                    line = reader.readLine() ?: break
-                    emit(line)
-                }
-            }
+            streamOutput(process, this)
 
             val exitCode = process.waitFor()
-            emit("[process exited with code $exitCode]")
+            emit(ExecOutput.Status("[process exited with code $exitCode]"))
         } catch (e: Exception) {
-            emit("error: failed to run '${binary.name}': ${e.message}")
+            emit(ExecOutput.Status("error: failed to run '${binary.name}': ${e.message}"))
         }
     }.flowOn(Dispatchers.IO)
 
@@ -90,7 +98,7 @@ object BinaryExecutor {
         workingDir: File,
         env: Map<String, String> = emptyMap(),
         onProcess: (Process) -> Unit = {}
-    ): Flow<String> = flow {
+    ): Flow<ExecOutput> = flow {
         try {
             val process = ProcessBuilder("/system/bin/sh", "-c", command)
                 .directory(workingDir)
@@ -99,18 +107,28 @@ object BinaryExecutor {
                 .start()
             onProcess(process)
 
-            BufferedReader(InputStreamReader(process.inputStream)).use { reader ->
-                var line: String?
-                while (true) {
-                    line = reader.readLine() ?: break
-                    emit(line)
-                }
-            }
+            streamOutput(process, this)
 
             val exitCode = process.waitFor()
-            emit("[exit $exitCode]")
+            emit(ExecOutput.Status("[exit $exitCode]"))
         } catch (e: Exception) {
-            emit("error: ${e.message}")
+            emit(ExecOutput.Status("error: ${e.message}"))
         }
     }.flowOn(Dispatchers.IO)
+
+    /**
+     * Streams decoded output as soon as it's available, without waiting for a
+     * newline — this is what lets progress bars, prompts, and no-newline
+     * partial prints render the way they would in a real terminal, instead of
+     * being buffered until (or garbled by) a line boundary that may never come.
+     */
+    private suspend fun streamOutput(process: Process, collector: FlowCollector<ExecOutput>) {
+        val reader = InputStreamReader(process.inputStream, Charsets.UTF_8)
+        val buffer = CharArray(READ_BUFFER_SIZE)
+        while (true) {
+            val read = reader.read(buffer)
+            if (read == -1) break
+            collector.emit(ExecOutput.Raw(String(buffer, 0, read)))
+        }
+    }
 }
