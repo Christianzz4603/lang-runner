@@ -11,8 +11,10 @@ import com.langrunner.app.terminal.BusyboxManager
 import com.langrunner.app.terminal.ShellResult
 import com.langrunner.app.terminal.ShellSession
 import com.langrunner.app.terminal.StorageAccess
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.File
 
 class TerminalViewModel(app: Application) : AndroidViewModel(app) {
@@ -93,6 +95,24 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
+    /** Sends typed text to the currently running process's stdin — lets
+     *  Rust/etc. programs that call something like `read_line()` actually
+     *  receive input, instead of the only option being to kill the process. */
+    fun sendInput(text: String) {
+        val process = runningProcessRef ?: return
+        appendLine(text)
+        viewModelScope.launch(Dispatchers.IO) {
+            try {
+                process.outputStream.write((text + "\n").toByteArray(Charsets.UTF_8))
+                process.outputStream.flush()
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    appendLine("error: couldn't send input: ${e.message}")
+                }
+            }
+        }
+    }
+
     private fun handle(output: ExecOutput) {
         when (output) {
             is ExecOutput.Raw -> appendRaw(output.text)
@@ -100,7 +120,7 @@ class TerminalViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    /** Kills the currently running command, if any — backs the terminal's Run/Stop toggle button. */
+    /** Kills the currently running command — backed by its own dedicated stop button. */
     fun stopCurrentCommand() {
         runningProcessRef?.destroy()
         runningJob?.cancel()

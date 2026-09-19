@@ -77,6 +77,18 @@
             android:imeOptions="actionSend" />
 
         <com.google.android.material.button.MaterialButton
+            android:id="@+id/stopButton"
+            style="@style/Widget.Material3.Button.IconButton.Filled"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="6dp"
+            android:visibility="gone"
+            app:icon="@drawable/ic_stop"
+            app:iconGravity="textStart"
+            app:iconPadding="0dp"
+            app:backgroundTint="@color/danger" />
+
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/terminalSend"
             style="@style/Widget.Material3.Button.IconButton.Filled"
             android:layout_width="wrap_content"

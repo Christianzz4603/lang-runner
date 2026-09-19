@@ -9,7 +9,6 @@ import android.view.ViewGroup
 import android.view.inputmethod.EditorInfo
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import com.langrunner.app.R
 import com.langrunner.app.data.SettingsRepository
 import com.langrunner.app.databinding.FragmentTerminalBinding
 import com.langrunner.app.terminal.AnsiParser
@@ -47,36 +46,38 @@ class TerminalFragment : Fragment() {
 
         viewModel.isRunning.observe(viewLifecycleOwner) { running ->
             binding.runningIndicator.visibility = if (running) View.VISIBLE else View.GONE
-            binding.terminalSend.setIconResource(if (running) R.drawable.ic_stop else R.drawable.ic_run)
+            binding.stopButton.visibility = if (running) View.VISIBLE else View.GONE
+            binding.terminalInput.hint = if (running) "send input to running process…" else "command"
         }
 
-        binding.terminalSend.setOnClickListener {
-            if (viewModel.isRunning.value == true) {
-                viewModel.stopCurrentCommand()
-            } else {
-                sendCommand()
-            }
-        }
-
-        // IMPORTANT: only react to the actual IME "send" action. Some keyboards
-        // invoke this listener a second time with a raw Enter KeyEvent for the
-        // same press — reacting to that too was submitting every command twice.
+        // Send always submits whatever's typed: to the running process's stdin
+        // if something's running, otherwise as a new command. Stopping a
+        // process is a separate, deliberate action (the red stop button) so
+        // it can never happen by accident while trying to send input.
+        binding.terminalSend.setOnClickListener { submit() }
         binding.terminalInput.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEND) {
-                sendCommand()
+                submit()
                 true
             } else {
                 false
             }
         }
+
+        binding.stopButton.setOnClickListener { viewModel.stopCurrentCommand() }
     }
 
-    private fun sendCommand() {
-        val cmd = binding.terminalInput.text.toString().trim()
-        if (cmd.isNotEmpty()) {
-            viewModel.runCommand(cmd)
-            binding.terminalInput.text.clear()
+    private fun submit() {
+        val text = binding.terminalInput.text.toString()
+        val trimmed = text.trim()
+        if (trimmed.isEmpty()) return
+
+        if (viewModel.isRunning.value == true) {
+            viewModel.sendInput(text)
+        } else {
+            viewModel.runCommand(trimmed)
         }
+        binding.terminalInput.text.clear()
     }
 
     private fun applyAppearance() {
